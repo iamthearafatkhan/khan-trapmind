@@ -1,0 +1,17 @@
+# Core
+cynapse>=0.3
+# Scanner & Prevention
+yara-python>=4.5.0
+watchdog>=4.0.0
+psutil>=5.9.8
+# Reinforcement Learning
+gymnasium>=0.29
+stable-baselines3>=2.0
+security-gym>=0.3
+# UI
+PyQt6>=6.6
+
+PyQt6>=6.6.0
+watchdog>=4.0.0
+yara-python>=4.5.0
+psutil>=5.9.8

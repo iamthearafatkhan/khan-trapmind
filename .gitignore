@@ -1,0 +1,18 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv
+env/
+venv/
+
+# Build outputs
+dist/
+build/
+*.spec
+
+# Khan TrapMind specific (Do not upload user test data!)
+.khan_trapmind/
