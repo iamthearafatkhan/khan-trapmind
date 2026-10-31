@@ -21,5 +21,16 @@ Welcome to Khan TrapMind, an AI-Powered Next-Gen Endpoint Defense.
 - Click "Scan USB Drive" to scan removable media.
 - Click "Open Quarantine" to see blocked threats. You can permanently delete them here.
 
-## 🗑️ How to Uninstall
-Use the "Uninstall" button in the app, or manually delete the `C:\Users\YourName\.khan_trapmind` folder and the TrapMind `.exe`.
+## 🗑️ How to Permanently Uninstall
+**Method 1: Using the App (Recommended)**
+1. Open Khan TrapMind.
+2. Click the **🗑️ (Trash Can) icon** at the bottom left of the sidebar.
+3. Confirm the uninstall. The app will clean up its hidden folders, delete the fake honeytokens, and close itself completely.
+4. You can now safely delete the `Khan_TrapMind.exe` file.
+
+**Method 2: Manual Uninstall**
+If you already deleted the app or it is not opening:
+1. Press `Win + R` on your keyboard, type `%USERPROFILE%`, and press Enter.
+2. Find and delete the folder named `.khan_trapmind`.
+3. Go to your Downloads folder and delete the `Private_Backups` folder.
+4. Delete the `Khan_TrapMind.exe` file.
