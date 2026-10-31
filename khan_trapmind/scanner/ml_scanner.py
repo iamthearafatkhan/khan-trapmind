@@ -3,8 +3,7 @@
 import os
 import numpy as np
 import pefile
-import torch
-from pytorch_tabnet.tab_model import TabNetClassifier
+
 
 class TabNetScanner:
     def __init__(self):
@@ -15,11 +14,14 @@ class TabNetScanner:
         self._load_model()
 
     def _load_model(self):
+        # IMPORT THEM HERE (Lazy Loading)
+        import torch
+        from pytorch_tabnet.tab_model import TabNetClassifier
+
         if os.path.exists(self.model_path):
             try:
                 print(f"[ML Engine] Loading TabNet model from {self.model_path}...")
                 self.model = TabNetClassifier()
-                # Load the model weights
                 self.model.load_model(self.model_path)
                 print("[ML Engine] TabNet model loaded successfully.")
             except Exception as e:

@@ -72,6 +72,7 @@ No software is 100% invincible. TrapMind is highly effective, but you should kno
 With Khan TrapMind running, you have an enterprise-grade, multi-layered shield that actively detects, quarantines, and analyzes threats. It turns any standard Windows PC into a proactive security environment.
 
 ## 👨‍💻 Credits
-Built by **Arafat Khan**
+---
+<div align="center"> <i>Built with ❤️ by <a href="https://github.com/iamthearafatkhan">Arafat Khan</a></i> </div>
 
 **If you find this project helpful, please consider giving it a ⭐ on GitHub!**

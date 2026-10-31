@@ -2,19 +2,21 @@
 
 import os
 import numpy as np
-import tensorflow as tf
+
 from huggingface_hub import hf_hub_download
 
 class MalConvScanner:
     def __init__(self):
         self.model = None
-        self.max_len = 1024 * 1024  # MalConv typically uses 1MB of raw bytes
+        self.max_len = 1024 * 1024
         self._load_model()
 
     def _load_model(self):
+        # IMPORT IT HERE (Lazy Loading)
+        import tensorflow as tf
+
         try:
             print("[ML Engine] Downloading/Loading MalConv model...")
-            # Download the model from Hugging Face (it caches it locally)
             model_path = hf_hub_download(
                 repo_id="cycloevan/malconv",
                 filename="models/malconv_model.h5"
