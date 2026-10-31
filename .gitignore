@@ -14,5 +14,10 @@ dist/
 build/
 *.spec
 
-# Khan TrapMind specific (Do not upload user test data!)
+# Khan TrapMind specific (Do not upload user test data or AI models!)
 .khan_trapmind/
+khan_trapmind/models/
+khan_trapmind/core/models/
+*.onnx
+*.h5
+*.joblib

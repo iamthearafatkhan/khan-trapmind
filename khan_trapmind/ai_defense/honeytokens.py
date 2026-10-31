@@ -1,10 +1,12 @@
 # khan_trapmind/ai_defense/honeytokens.py
+
 import os
 import json
 
 class HoneytokenDeployer:
     def __init__(self, target_dir):
-        self.target_dir = target_dir
+        # Create a juicy folder name
+        self.target_dir = os.path.join(target_dir, "Private_Backups")
         self.token_names = [
             "admin_passwords.txt",
             "aws_secret_keys.json",
@@ -12,7 +14,6 @@ class HoneytokenDeployer:
         ]
 
     def deploy_traps(self):
-        """Creates fake, highly attractive files for hackers/AI to steal."""
         deployed = []
         os.makedirs(self.target_dir, exist_ok=True)
         
