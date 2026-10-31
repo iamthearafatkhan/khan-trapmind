@@ -71,8 +71,11 @@ No software is 100% invincible. TrapMind is highly effective, but you should kno
 ## 📊 Outcome
 With Khan TrapMind running, you have an enterprise-grade, multi-layered shield that actively detects, quarantines, and analyzes threats. It turns any standard Windows PC into a proactive security environment.
 
+## 📄 License
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
 ## 👨‍💻 Credits
 ---
 <div align="center"> <i>Built with ❤️ by <a href="https://github.com/iamthearafatkhan">Arafat Khan</a></i> </div>
 
-**If you find this project helpful, please consider giving it a ⭐ on GitHub!**
+**If you find this project helpful, please consider giving it a ⭐ on GitHub!** 
