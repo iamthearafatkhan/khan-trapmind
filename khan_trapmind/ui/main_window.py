@@ -31,8 +31,7 @@ class ScannerLoaderThread(QThread):
     log_message = pyqtSignal(str)
 
     def run(self):
-        # 2-second delay so the UI opens instantly and smoothly
-        time.sleep(2) 
+        time.sleep(2) # UI render delay
         self.log_message.emit("[⏳] Loading AI Models in background (TensorFlow, PyTorch)...")
         try:
             monitor = RealtimeMonitor(
@@ -125,12 +124,10 @@ class KhanTrapMindWindow(QMainWindow):
         
         self.realtime_alert.connect(self._update_log)
 
-        # Fetch IP in background to keep UI fast
         self.ip_thread = IPFetcherThread()
         self.ip_thread.ip_fetched.connect(self._update_mobile_ip)
         self.ip_thread.start()
 
-        # Load AI models in background with a delay
         self.loader_thread = ScannerLoaderThread()
         self.loader_thread.log_message.connect(self._update_log)
         self.loader_thread.scanner_ready.connect(self._on_scanner_ready)
@@ -205,7 +202,6 @@ class KhanTrapMindWindow(QMainWindow):
         main_layout = QGridLayout()
         main_layout.setContentsMargins(30, 20, 30, 20)
         main_layout.setSpacing(20)
-
         main_layout.setColumnStretch(0, 1)
         main_layout.setColumnStretch(1, 3)
 
@@ -262,7 +258,6 @@ class KhanTrapMindWindow(QMainWindow):
         self.quarantine_btn.setObjectName("dangerBtn")
         self.quarantine_btn.clicked.connect(self._open_quarantine)
         
-        # Restored Manual Button
         self.manual_btn = QPushButton("📖 User Manual")
         self.manual_btn.setObjectName("manualBtn")
         self.manual_btn.clicked.connect(self._show_user_manual)
@@ -314,7 +309,9 @@ class KhanTrapMindWindow(QMainWindow):
         central.setLayout(main_layout)
         self.setCentralWidget(central)
 
-    # ... [Tray, Update, and Scan logic remains the same as previous version] ...
+    # ==========================================
+    # TRAY & LOGIC
+    # ==========================================
     def _setup_tray_icon(self):
         self.tray_icon = QSystemTrayIcon(self)
         if os.path.exists(self.icon_path): self.tray_icon.setIcon(QIcon(self.icon_path))
@@ -331,7 +328,8 @@ class KhanTrapMindWindow(QMainWindow):
 
     def _actually_quit(self):
         if self.monitor: self.monitor.stop()
-        self.ml_thread.stop(); self.proc_thread.terminate(); QApplication.quit()
+        self.ml_thread.stop(); self.proc_thread.terminate()
+        os._exit(0) # Force kill
 
     def _clear_logs(self):
         self.console.clear(); GLOBAL_LOGS.clear(); self.console.append("[✔] Logs cleared.")
@@ -382,25 +380,42 @@ class KhanTrapMindWindow(QMainWindow):
         layout.addWidget(text_browser); manual_window.setLayout(layout); manual_window.exec()
 
     def _uninstall(self):
-        reply = QMessageBox.question(self, "Confirm Uninstall", "Are you sure you want to uninstall Khan TrapMind?\n\nThis will delete your quarantine vault, AI models, and stop all protection.", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.No)
+        reply = QMessageBox.question(
+            self, "Confirm Uninstall", 
+            "Are you sure you want to uninstall Khan TrapMind?\n\nThis will delete your quarantine vault, AI models, and stop all protection.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, 
+            QMessageBox.StandardButton.No
+        )
+
         if reply == QMessageBox.StandardButton.Yes:
             self._update_log("[!] Uninstalling Khan TrapMind...")
+            
+            # 1. Stop all threads safely
             if self.monitor: self.monitor.stop()
-            self.ml_thread.stop(); self.proc_thread.terminate()
+            self.ml_thread.stop()
+            self.proc_thread.terminate()
+            
+            # 2. Delete App Data
             app_data_dir = os.path.expanduser("~/.khan_trapmind")
             if os.path.exists(app_data_dir):
-                try: shutil.rmtree(app_data_dir); self._update_log("[✔] Deleted all app data and quarantine vaults.")
-                except Exception as e: self._update_log(f"[!] Failed to delete app data: {e}")
+                try:
+                    shutil.rmtree(app_data_dir)
+                    self._update_log("[✔] Deleted all app data and quarantine vaults.")
+                except Exception as e:
+                    self._update_log(f"[!] Failed to delete app data: {e}")
+                    
+            # 3. Delete Honeytokens
             token_dir = os.path.expanduser("~/Downloads/Private_Backups")
             if os.path.exists(token_dir):
-                try: shutil.rmtree(token_dir); self._update_log("[✔] Removed honeytokens.")
-                except Exception: pass
-            QMessageBox.information(self, "Uninstalled", "Khan TrapMind has been successfully uninstalled.")
-            QApplication.quit()
+                try:
+                    shutil.rmtree(token_dir)
+                    self._update_log("[✔] Removed honeytokens.")
+                except Exception:
+                    pass
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    app.setQuitOnLastWindowClosed(False)
-    window = KhanTrapMindWindow()
-    window.show()
-    sys.exit(app.exec())
+            self._update_log("[✔] Uninstall complete. Goodbye!")
+            QMessageBox.information(self, "Uninstalled", "Khan TrapMind has been successfully uninstalled.\nThe application will now close.")
+            
+            # 4. FORCE KILL THE ENTIRE PROCESS
+            # This ensures Windows releases the .exe file so you can delete it!
+            os._exit(0)

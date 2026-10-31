@@ -78,4 +78,8 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ---
 <div align="center"> <i>Built with ❤️ by <a href="https://github.com/iamthearafatkhan">Arafat Khan</a></i> </div>
 
+---
+<div align="center">
 **If you find this project helpful, please consider giving it a ⭐ on GitHub!** 
+
+</div>
