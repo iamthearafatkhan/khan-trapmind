@@ -32,12 +32,23 @@ Built with Python and PyQt6, it provides a premium, dark-themed dashboard that r
 *   📱 **Mobile Web Dashboard:** Monitor your PC's security status and live threats from your phone via `http://YOUR_IP:8000`.
 *   🔄 **Cloud Threat Intelligence:** Automatically fetches the latest YARA rules from the cloud to stay updated against new threats.
 
+---
+
+## 🚨 IMPORTANT: Before You Run (First Time Users)
+
+1.  **Administrator Privileges:** When you double-click the `.exe`, Windows will show a UAC prompt. You **MUST** click **"Yes"**. This is required so TrapMind can read the Windows Security Event Logs (to catch brute-force attacks).
+2.  **Windows SmartScreen:** Because this is a free, open-source tool without a $300/year digital signature, Windows Defender might show a blue popup saying *"Windows protected your PC"*. Click **"More info"** and then **"Run anyway"**.
+3.  **First Run Takes Time:** The first time you open TrapMind, it will take a few seconds to load the AI models. The logo splash screen will appear. Please wait a moment. (You need an internet connection on the first run to download the 15MB AI models from Hugging Face).
+4.  **Antivirus False Positives:** Because TrapMind monitors system processes and is built with Python (PyInstaller), some antivirus software might falsely flag it. This is a known industry issue. You may need to add an exclusion in Windows Defender.
+
+---
+
 ## 🚀 Installation & Usage
 
 ### Option 1: Standalone Executable (Recommended for Users)
 1. Go to the [**Releases Page**](https://github.com/iamthearafatkhan/khan-trapmind/releases).
 2. Download the latest `Khan_TrapMind.exe`.
-3. Double-click to run. **Note:** Windows will ask for Administrator privileges. Click **Yes** (this is required to read Windows Security Logs).
+3. Double-click to run. (See the warnings above).
 
 ### Option 2: Run from Source (For Developers)
 ```bash
@@ -45,28 +56,49 @@ Built with Python and PyQt6, it provides a premium, dark-themed dashboard that r
 git clone https://github.com/iamthearafatkhan/khan-trapmind.git
 cd khan-trapmind
 
-# 2. Install dependencies
+# 2. Create a virtual environment
+python -m venv trap_venv
+source trap_venv/Scripts/activate  # On Windows
+
+# 3. Install dependencies
 pip install -r requirements.txt
 
-# 3. Run the application (as Administrator)
+# 4. Run the application (as Administrator)
 python main.py
 ```
 
-## 🛡️ How to Use
+
+## 🛡️ How to Use Khan TrapMind
 *   **System Tray:** Closing the window (X) hides the app in your system tray (bottom right). Right-click the tray icon to exit.
 
-*   **Mobile Dashboard:** Open the URL shown in the top-right corner on your phone (connected to the same Wi-Fi) to monitor your PC remotely.
+*   **Mobile Dashboard:** Ensure your phone is on the same Wi-Fi. Open the URL shown in the top-right corner of the app (e.g., http://192.168.1.5:8000) to monitor your PC remotely.
+
+*   **Honeytokens:** TrapMind automatically creates a folder at Downloads\Private_Backups. If you ever see malware touching this folder, the UI will scream at you!
 
 *   **Quarantine:** If a threat is found, it is moved to a secure vault. You can view and permanently delete it via the "Open Quarantine" button.
+
+*   **Scanning:** Use "Run Full Scan" or "Scan USB Drive" to proactively check your files.
+
+
+## 🗑️ How to Uninstall
+
+1. Open Khan TrapMind.
+
+2. Click the 🗑️ (Trash Can) icon at the bottom left of the sidebar.
+
+3. Confirm the uninstall. The app will clean up its hidden folders, delete the fake honeytokens, and close itself.
+
+4. You can now safely delete the Khan_TrapMind.exe file.
+
 
 ## 🚫 Limitations (The Honest Truth)
 No software is 100% invincible. TrapMind is highly effective, but you should know its limits:
 
-1.   **Kernel-Level Attacks:** TrapMind runs in User-Mode (Ring 3). It cannot stop an attacker who already has full Administrator/Kernel access (Ring 0).
+1. **Kernel-Level Attacks:** TrapMind runs in User-Mode (Ring 3). It cannot stop an attacker who already has full Administrator/Kernel access (Ring 0).
 
-2.   **Memory-Only Threats:** Advanced fileless malware that runs purely in RAM without touching the disk (though TrapMind will kill the spawned processes and flag CPU anomalies).
+2. **Memory-Only Threats:** Advanced fileless malware that runs purely in RAM without touching the disk (though TrapMind will kill the spawned processes and flag CPU anomalies).
 
-3.   **Phishing:** TrapMind does not scan your emails or browser text; it protects the endpoint (the device).
+3. **Phishing:** TrapMind does not scan your emails or browser text; it protects the endpoint (the device).
 
 ## 📊 Outcome
 With Khan TrapMind running, you have an enterprise-grade, multi-layered shield that actively detects, quarantines, and analyzes threats. It turns any standard Windows PC into a proactive security environment.

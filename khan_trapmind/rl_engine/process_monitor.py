@@ -13,26 +13,34 @@ class ProcessMonitorThread(QThread):
         browsers = ["chrome.exe", "firefox.exe", "msedge.exe", "brave.exe", "opera.exe"]
         shells = ["cmd.exe", "powershell.exe", "wscript.exe", "cscript.exe", "bash.exe"]
         
-        # Keep track of processes we've already killed to avoid spam
+        # NEW: Safe background apps that legitimately read cookies
+        safe_apps = [
+            "msedgewebview2.exe", "eosoverlayrenderer-win64-shipping.exe", 
+            "nvidia overlay.exe", "epicwebhelper.exe", "gamebar.exe", 
+            "searchapp.exe", "runtimebroker.exe", "svchost.exe",
+            "code.exe", "electron.exe", "discord.exe", "spotify.exe"
+        ]
+        
         killed_pids = set()
 
         while True:
             for proc in psutil.process_iter(['pid', 'name', 'ppid']):
                 try:
+                    proc_name = proc.info['name'].lower()
+
                     # 1. DRIVE-BY / MEMORY EXPLOIT DETECTION
-                    # If a browser spawns a shell, that is a massive red flag (Drive-by download)
-                    if proc.info['name'].lower() in shells:
+                    if proc_name in shells:
                         parent = psutil.Process(proc.info['ppid'])
                         if parent.name().lower() in browsers and proc.info['pid'] not in killed_pids:
                             self.threat_detected.emit(
                                 f"[🚨 ZERO-DAY PREVENTED] Browser ({parent.name()}) tried to spawn {proc.info['name']}! Killing process."
                             )
-                            proc.kill() # Instantly kill the malicious shell
+                            proc.kill()
                             killed_pids.add(proc.info['pid'])
 
                     # 2. COOKIE THEFT DETECTION
-                    # Check if a process has files open in browser cookie directories
-                    if proc.info['name'].lower() not in browsers and proc.info['name'].lower() not in ["khan_trapmind.exe", "python.exe"]:
+                    # Ignore browsers and our safe apps list
+                    if proc_name not in browsers and proc_name not in safe_apps and proc_name not in ["khan_trapmind.exe", "python.exe"]:
                         try:
                             open_files = proc.open_files()
                             for f in open_files:
@@ -44,9 +52,8 @@ class ProcessMonitorThread(QThread):
                                         proc.kill()
                                         killed_pids.add(proc.info['pid'])
                         except (psutil.AccessDenied, psutil.NoSuchProcess):
-                            pass # Normal apps will deny access to open_files
-
+                            pass
                 except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                     pass
             
-            time.sleep(1) # Check every second
+            time.sleep(5)

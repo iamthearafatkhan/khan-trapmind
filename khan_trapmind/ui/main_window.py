@@ -8,11 +8,11 @@ import socket
 import psutil
 import threading
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QLabel, QVBoxLayout, 
-                             QWidget, QPushButton, QTextEdit, QHBoxLayout, 
+                             QWidget, QPushButton, QPlainTextEdit, QHBoxLayout, 
                              QProgressBar, QFrame, QMessageBox, QSystemTrayIcon, 
-                             QMenu, QGridLayout, QDialog, QTextBrowser)
+                             QMenu, QGridLayout, QDialog, QTextBrowser, QFileDialog)
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
-from PyQt6.QtGui import QPixmap, QIcon, QAction
+from PyQt6.QtGui import QPixmap, QIcon, QAction, QTextCursor
 
 from .quarantine_window import QuarantineWindow
 from ..core.windows_log import WindowsEventMonitorThread
@@ -23,15 +23,20 @@ from ..scanner.yara_engine import YaraScanner
 from ..rl_engine.process_monitor import ProcessMonitorThread
 from ..scanner.realtime_monitor import RealtimeMonitor
 
+def get_resource_path(relative_path):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.dirname(os.path.dirname(__file__)), relative_path)
+
 # ==========================================
-# BACKGROUND THREADS (For Speed)
+# BACKGROUND THREADS
 # ==========================================
 class ScannerLoaderThread(QThread):
     scanner_ready = pyqtSignal(object)
     log_message = pyqtSignal(str)
 
     def run(self):
-        time.sleep(2) # UI render delay
+        time.sleep(2)
         self.log_message.emit("[⏳] Loading AI Models in background (TensorFlow, PyTorch)...")
         try:
             monitor = RealtimeMonitor(
@@ -74,31 +79,24 @@ class USBScanThread(QThread):
     log_message = pyqtSignal(str)
     scan_finished = pyqtSignal()
 
+    def __init__(self, target_path):
+        super().__init__()
+        self.target_path = target_path
+
     def run(self):
-        usb_drives = []
-        for partition in psutil.disk_partitions():
-            if 'removable' in partition.opts or 'cdrom' in partition.opts:
-                usb_drives.append(partition.mountpoint)
-                
-        if not usb_drives:
-            self.log_message.emit("[!] No USB or External drives detected.")
-            self.scan_finished.emit()
-            return
-            
-        self.log_message.emit(f"[>] Starting deep scan on USB drives: {usb_drives}")
+        self.log_message.emit(f"[>] Starting deep scan on: {self.target_path}")
         scanner = YaraScanner()
         threats_found = 0
         
-        for drive in usb_drives:
-            for root, dirs, files in os.walk(drive):
-                for file in files:
-                    file_path = os.path.join(root, file)
-                    is_threat, threat_name = scanner.scan_file(file_path)
-                    if is_threat:
-                        threats_found += 1
-                        self.log_message.emit(f"[🚨 USB ALERT] Malware found: {file} -> {threat_name}")
-                        
-        self.log_message.emit(f"[✔] USB Scan Complete. Found {threats_found} threats.")
+        for root, dirs, files in os.walk(self.target_path):
+            for file in files:
+                file_path = os.path.join(root, file)
+                is_threat, threat_name = scanner.scan_file(file_path)
+                if is_threat:
+                    threats_found += 1
+                    self.log_message.emit(f"[🚨 ALERT] Malware found: {file} -> {threat_name}")
+                    
+        self.log_message.emit(f"[✔] Scan Complete. Found {threats_found} threats.")
         self.scan_finished.emit()
 
 # ==========================================
@@ -112,7 +110,9 @@ class KhanTrapMindWindow(QMainWindow):
         self.setWindowTitle("Khan TrapMind - Advanced Defense")
         self.setGeometry(100, 100, 1150, 800)
         
-        self.icon_path = os.path.join(os.path.dirname(__file__), "logo.ico")
+        self.icon_path = get_resource_path(os.path.join("khan_trapmind", "ui", "logo.ico"))
+        self.logo_path = get_resource_path(os.path.join("khan_trapmind", "ui", "logo.png"))
+        
         if os.path.exists(self.icon_path):
             self.setWindowIcon(QIcon(self.icon_path))
             
@@ -142,12 +142,12 @@ class KhanTrapMindWindow(QMainWindow):
         self.proc_thread.threat_detected.connect(self._update_log)
         self.proc_thread.start()
 
-        rules_dir = os.path.join(os.path.dirname(__file__), "..", "scanner", "rules")
-        self.cloud_intel = ThreatIntelEngine(rules_dir, self.realtime_alert.emit)
+        cloud_rules_dir = os.path.expanduser("~/.khan_trapmind/cloud_rules")
+        self.cloud_intel = ThreatIntelEngine(cloud_rules_dir, self.realtime_alert.emit)
         self.cloud_intel.start()
 
-        threading.Thread(target=run_server, daemon=True).start()
-        self._update_log("[🌐 Web Dashboard Active at http://localhost:8000]")
+        threading.Thread(target=run_server, args=(self.realtime_alert.emit,), daemon=True).start()
+        self._update_log("[🌐] Starting Web Dashboard server...")
 
         self.log_thread = WindowsEventMonitorThread()
         self.log_thread.security_alert.connect(self._update_log)
@@ -170,7 +170,8 @@ class KhanTrapMindWindow(QMainWindow):
             QLabel#metric_val { font-size: 24px; color: #06b6d4; font-weight: bold; }
             QLabel#mobile_ip { font-size: 13px; color: #06b6d4; font-weight: bold; background-color: rgba(6, 182, 212, 0.1); padding: 6px 10px; border-radius: 4px; }
             
-            QTextEdit { 
+            /* SWITCHED TO QPlainTextEdit for Speed */
+            QPlainTextEdit { 
                 background-color: #1e293b; color: #10b981; border: 1px solid #334155; 
                 border-radius: 8px; padding: 15px; font-family: 'Consolas', monospace; font-size: 13px;
             }
@@ -205,12 +206,10 @@ class KhanTrapMindWindow(QMainWindow):
         main_layout.setColumnStretch(0, 1)
         main_layout.setColumnStretch(1, 3)
 
-        # --- HEADER ---
         header_layout = QHBoxLayout()
         logo_label = QLabel()
-        logo_png = os.path.join(os.path.dirname(__file__), "logo.png")
-        if os.path.exists(logo_png):
-            logo_label.setPixmap(QPixmap(logo_png).scaled(50, 50, Qt.AspectRatioMode.KeepAspectRatio))
+        if os.path.exists(self.logo_path):
+            logo_label.setPixmap(QPixmap(self.logo_path).scaled(50, 50, Qt.AspectRatioMode.KeepAspectRatio))
             
         title = QLabel("Khan TrapMind")
         title.setObjectName("title")
@@ -224,7 +223,6 @@ class KhanTrapMindWindow(QMainWindow):
         header_layout.addWidget(self.mobile_ip)
         main_layout.addLayout(header_layout, 0, 0, 1, 2)
 
-        # --- LEFT SIDEBAR ---
         sidebar_widget = QWidget()
         sidebar_widget.setMaximumWidth(300) 
         sidebar = QVBoxLayout(sidebar_widget)
@@ -284,17 +282,17 @@ class KhanTrapMindWindow(QMainWindow):
         sidebar.addLayout(bottom_layout)
         main_layout.addWidget(sidebar_widget, 1, 0)
 
-        # --- RIGHT SIDE ---
         right_layout = QVBoxLayout()
         
         self.progress_bar = QProgressBar()
         self.progress_bar.setValue(0)
         self.progress_bar.setTextVisible(True)
         
-        self.console = QTextEdit()
+        # SWITCHED TO QPlainTextEdit
+        self.console = QPlainTextEdit()
         self.console.setReadOnly(True)
-        self.console.append("[✔] Khan TrapMind UI Initialized instantly.")
-        self.console.append("--------------------------------------------------")
+        self.console.appendPlainText("[✔] Khan TrapMind UI Initialized instantly.")
+        self.console.appendPlainText("--------------------------------------------------")
         
         clear_btn = QPushButton("Clear Logs")
         clear_btn.setStyleSheet("padding: 5px 10px; font-size: 11px; color: #64748b; border-color: #334155;")
@@ -309,9 +307,6 @@ class KhanTrapMindWindow(QMainWindow):
         central.setLayout(main_layout)
         self.setCentralWidget(central)
 
-    # ==========================================
-    # TRAY & LOGIC
-    # ==========================================
     def _setup_tray_icon(self):
         self.tray_icon = QSystemTrayIcon(self)
         if os.path.exists(self.icon_path): self.tray_icon.setIcon(QIcon(self.icon_path))
@@ -329,14 +324,24 @@ class KhanTrapMindWindow(QMainWindow):
     def _actually_quit(self):
         if self.monitor: self.monitor.stop()
         self.ml_thread.stop(); self.proc_thread.terminate()
-        os._exit(0) # Force kill
+        os._exit(0)
 
     def _clear_logs(self):
-        self.console.clear(); GLOBAL_LOGS.clear(); self.console.append("[✔] Logs cleared.")
+        self.console.clear(); GLOBAL_LOGS.clear(); self.console.appendPlainText("[✔] Logs cleared.")
 
     def _update_log(self, message):
-        GLOBAL_LOGS.append(message); self.console.append(message)
-        scrollbar = self.console.verticalScrollBar(); scrollbar.setValue(scrollbar.maximum())
+        GLOBAL_LOGS.append(message)
+        
+        # Check if user is already scrolled to the bottom before auto-scrolling
+        scrollbar = self.console.verticalScrollBar()
+        is_at_bottom = scrollbar.value() >= (scrollbar.maximum() - 10)
+        
+        self.console.appendPlainText(message)
+        
+        # Only auto-scroll if they were already at the bottom
+        if is_at_bottom:
+            scrollbar.setValue(scrollbar.maximum())
+            
         if "CRITICAL" in message or "Malware detected" in message or "Anomaly" in message or "OS ALERT" in message:
             if not self.isVisible(): self.tray_icon.showMessage("THREAT DETECTED", message, QSystemTrayIcon.MessageIcon.Critical, 5000)
             else:
@@ -360,8 +365,11 @@ class KhanTrapMindWindow(QMainWindow):
         dialog = QuarantineWindow(self); dialog.exec()
 
     def _scan_usb(self):
+        folder = QFileDialog.getExistingDirectory(self, "Select USB or External Drive to Scan (e.g., F:\\)")
+        if not folder:
+            return
         self.usb_btn.setEnabled(False); self.usb_btn.setText("Scanning USB...")
-        self.usb_thread = USBScanThread()
+        self.usb_thread = USBScanThread(folder)
         self.usb_thread.log_message.connect(self._update_log)
         self.usb_thread.scan_finished.connect(lambda: (self.usb_btn.setEnabled(True), self.usb_btn.setText("Scan USB Drive")))
         self.usb_thread.start()
@@ -373,49 +381,32 @@ class KhanTrapMindWindow(QMainWindow):
         manual_window.setStyleSheet("QDialog { background-color: #0b0f19; } QTextBrowser { background-color: #1e293b; color: #e2e8f0; border: none; padding: 20px; font-size: 14px; }")
         layout = QVBoxLayout()
         text_browser = QTextBrowser()
-        manual_path = os.path.join(os.path.dirname(__file__), "..", "..", "USER_MANUAL.md")
+        manual_path = get_resource_path("USER_MANUAL.md")
         if os.path.exists(manual_path):
             with open(manual_path, "r", encoding="utf-8") as f: text_browser.setMarkdown(f.read())
         else: text_browser.setPlainText("User manual not found.")
         layout.addWidget(text_browser); manual_window.setLayout(layout); manual_window.exec()
 
     def _uninstall(self):
-        reply = QMessageBox.question(
-            self, "Confirm Uninstall", 
-            "Are you sure you want to uninstall Khan TrapMind?\n\nThis will delete your quarantine vault, AI models, and stop all protection.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, 
-            QMessageBox.StandardButton.No
-        )
-
+        reply = QMessageBox.question(self, "Confirm Uninstall", "Are you sure you want to uninstall Khan TrapMind?\n\nThis will delete your quarantine vault, AI models, and stop all protection.", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.No)
         if reply == QMessageBox.StandardButton.Yes:
             self._update_log("[!] Uninstalling Khan TrapMind...")
-            
-            # 1. Stop all threads safely
             if self.monitor: self.monitor.stop()
-            self.ml_thread.stop()
-            self.proc_thread.terminate()
-            
-            # 2. Delete App Data
+            self.ml_thread.stop(); self.proc_thread.terminate()
             app_data_dir = os.path.expanduser("~/.khan_trapmind")
             if os.path.exists(app_data_dir):
-                try:
-                    shutil.rmtree(app_data_dir)
-                    self._update_log("[✔] Deleted all app data and quarantine vaults.")
-                except Exception as e:
-                    self._update_log(f"[!] Failed to delete app data: {e}")
-                    
-            # 3. Delete Honeytokens
+                try: shutil.rmtree(app_data_dir); self._update_log("[✔] Deleted all app data and quarantine vaults.")
+                except Exception as e: self._update_log(f"[!] Failed to delete app data: {e}")
             token_dir = os.path.expanduser("~/Downloads/Private_Backups")
             if os.path.exists(token_dir):
-                try:
-                    shutil.rmtree(token_dir)
-                    self._update_log("[✔] Removed honeytokens.")
-                except Exception:
-                    pass
-
-            self._update_log("[✔] Uninstall complete. Goodbye!")
-            QMessageBox.information(self, "Uninstalled", "Khan TrapMind has been successfully uninstalled.\nThe application will now close.")
-            
-            # 4. FORCE KILL THE ENTIRE PROCESS
-            # This ensures Windows releases the .exe file so you can delete it!
+                try: shutil.rmtree(token_dir); self._update_log("[✔] Removed honeytokens.")
+                except Exception: pass
+            QMessageBox.information(self, "Uninstalled", "Khan TrapMind has been successfully uninstalled.")
             os._exit(0)
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    app.setQuitOnLastWindowClosed(False)
+    window = KhanTrapMindWindow()
+    window.show()
+    sys.exit(app.exec())

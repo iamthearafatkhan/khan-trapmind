@@ -1,6 +1,6 @@
 # khan_trapmind/web/dashboard.py
 import os
-import threading
+import sys
 import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, FileResponse
@@ -9,16 +9,34 @@ app = FastAPI()
 GLOBAL_STATS = {"cpu": 0, "ram": 0, "net": 0}
 GLOBAL_LOGS = []
 
+def get_base_path():
+    """Get the correct path for assets in both source and PyInstaller EXE."""
+    if getattr(sys, 'frozen', False):
+        return sys._MEIPASS
+    return os.path.dirname(os.path.dirname(__file__))
+
 @app.get("/api/stats")
 def get_stats():
     return {"stats": GLOBAL_STATS, "logs": GLOBAL_LOGS[-10:]}
 
-# Serve the logo to the web dashboard
 @app.get("/logo.png")
 def get_logo():
-    logo_path = os.path.join(os.path.dirname(__file__), "..", "ui", "logo.png")
-    if os.path.exists(logo_path):
-        return FileResponse(logo_path)
+    if getattr(sys, 'frozen', False):
+        base = sys._MEIPASS
+    else:
+        base = os.path.dirname(os.path.dirname(__file__))
+        
+    paths = [
+        os.path.join(base, "khan_trapmind", "ui", "logo.png"),
+        os.path.join(base, "ui", "logo.png"),
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "ui", "logo.png"),
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "khan_trapmind", "ui", "logo.png")
+    ]
+    
+    for p in paths:
+        if os.path.exists(p):
+            return FileResponse(p)
+            
     return {"error": "Logo not found"}
 
 @app.get("/", response_class=HTMLResponse)
@@ -28,7 +46,6 @@ def dashboard():
     <html>
     <head>
         <title>Khan TrapMind</title>
-        <!-- Tab Bar Icon -->
         <link rel="icon" type="image/png" href="/logo.png">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
@@ -85,5 +102,25 @@ def dashboard():
     </html>
     """
 
-def run_server():
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="error")
+def run_server(log_callback=None):
+    try:
+        if log_callback:
+            log_callback("[🌐] Starting Web Dashboard server...")
+        
+        # CRITICAL FIX: Pass log_config=None to bypass Uvicorn's broken formatter
+        config = uvicorn.Config(
+            app, 
+            host="0.0.0.0", 
+            port=8000, 
+            log_level="critical", 
+            log_config=None  
+        )
+        server = uvicorn.Server(config)
+        
+        # Prevent signal crash in threads
+        server.install_signal_handlers = lambda: None 
+        server.run()
+        
+    except Exception as e:
+        if log_callback:
+            log_callback(f"[!] Web Dashboard Failed: {e}")
