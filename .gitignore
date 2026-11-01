@@ -8,6 +8,7 @@ __pycache__/
 .venv
 env/
 venv/
+trap_venv/     <--- ADD THIS LINE
 
 # Build outputs
 dist/

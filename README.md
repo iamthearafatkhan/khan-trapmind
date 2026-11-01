@@ -101,7 +101,7 @@ No software is 100% invincible. TrapMind is highly effective, but you should kno
 3. **Phishing:** TrapMind does not scan your emails or browser text; it protects the endpoint (the device).
 
 ## 📊 Outcome
-With Khan TrapMind running, you have an enterprise-grade, multi-layered shield that actively detects, quarantines, and analyzes threats. It turns any standard Windows PC into a proactive security environment.
+With Khan TrapMind running, you have an enterprise-grade, multi-layered shield that actively detects, quarantines, and analyzes threats. It turns any standard Windows PC into a proactive security environment. (Give me feedback.)
 
 ## 📄 License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
